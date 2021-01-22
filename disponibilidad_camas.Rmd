@@ -1,0 +1,205 @@
+---
+title: "ocupacion_camas"
+author: "Isaac Núñez"
+date: "9/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readxl); library(tidyverse); library(lubridate);library(RColorBrewer)
+```
+
+
+
+```{r importar bases excel, include = F, warning=F}
+mes_31 <- str_c(c(str_c(rep("0", times = 9), 1:9), 10:31), rep("_12_20", times = 31))
+mes_19 <- str_c(c(str_c(rep("0", times = 9), 1:9), 10:19), rep("_01_21", times = 19))
+
+dic_ene <- c(mes_31, mes_19)
+
+rutas_hosp_gral <- str_c("E:/Protocolos de investigación/Bases de datos ocupación hospitalaria/Hospitalización general/hosp_gral_", dic_ene, ".xlsx")
+rutas_camas_vent <- str_c("E:/Protocolos de investigación/Bases de datos ocupación hospitalaria/Camas con ventilador/camas_vent_", dic_ene, ".xlsx")
+rutas_hosp_uci <- str_c("E:/Protocolos de investigación/Bases de datos ocupación hospitalaria/Camas UCI/camas_uci_", dic_ene, ".xlsx")
+
+nombres_columnas <- c("hospital", "estado", "institucion", "clues", "porcentaje_ocupacion")
+
+#Camas hospitalizacion general
+for(i in seq_along(rutas_hosp_gral)){
+  if(i == 1){   
+  assign(str_c("camas_generales"),
+            read_excel(rutas_hosp_gral[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "general"))
+    }else{
+  camas_generales <- rbind(camas_generales,read_excel(rutas_hosp_gral[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "general"))
+    }
+   }
+
+camas_generales_cdmx <- filter(camas_generales, estado == "Ciudad de México")%>% 
+    group_by(clues, fecha, tipo_cama) %>%
+  slice(1) %>% 
+  ungroup() %>% 
+  group_by(clues) %>% 
+  arrange(fecha, .by_group = T)
+
+#Camas con ventilador
+for(i in seq_along(rutas_camas_vent)){
+  if(i == 1){   
+  assign(str_c("camas_ventilador"),
+            read_excel(rutas_camas_vent[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "ventilador"))
+    }else{
+  camas_ventilador <- rbind(camas_ventilador,read_excel(rutas_camas_vent[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "ventilador"))
+    }
+   }
+
+camas_ventilador_cdmx <- filter(camas_ventilador, estado == "Ciudad de México")%>% 
+   group_by(clues, fecha, tipo_cama) %>%
+  slice(1) %>% 
+  ungroup() %>% 
+  group_by(clues) %>% 
+  arrange(fecha, .by_group = T)
+
+#Camas UCI
+for(i in seq_along(rutas_hosp_uci)){
+  if(i == 1){   
+  assign(str_c("camas_uci"),
+            read_excel(rutas_hosp_uci[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "uci"))
+    }else{
+  camas_uci <- rbind(camas_uci,read_excel(rutas_hosp_uci[i], skip =1) %>% 
+    rename(hospital = `Unidad médica`, estado = Estado, institucion = Institución, clues = CLUES, 
+           porcentaje_ocupacion = `% de Ocupación`) %>% 
+      mutate(fecha = dmy(dic_ene[i]),
+             tipo_cama = "uci"))
+    }
+   }
+
+camas_uci_cdmx <-filter(camas_uci, estado == "Ciudad de México") %>% 
+  group_by(clues, fecha, tipo_cama) %>%
+  slice(1) %>% 
+  ungroup() %>% 
+  group_by(clues) %>% 
+  arrange(fecha, .by_group = T)
+
+#DF de camas para la CDMX y para todo el país
+camas_cdmx <- rbind(camas_generales_cdmx, camas_ventilador_cdmx, camas_uci_cdmx)
+
+camas_nacional <- rbind(camas_generales, camas_ventilador, camas_uci) %>% 
+  group_by(clues) %>% 
+  arrange(fecha, .by_group = T)
+```
+
+
+```{r análisis camas ciudad de méxico, warning= F, echo = F}
+camas_cdmx_adulto <- camas_cdmx %>% 
+  anti_join(filter(camas_cdmx,  str_detect(hospital, "Pedi")|
+                     str_detect(hospital, "Infantil") |
+                     str_detect(hospital, "ped")), by = "clues") %>% 
+  mutate(porcentaje_mod = cut(porcentaje_ocupacion, breaks = seq(from = 0, to = 100, by = 10), include.lowest = T))
+
+#Camas generales
+plot_camas_grales <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "general"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
+  labs(x="",y="",title="Ocupación de camas generales en hospitales IRAG de la Ciudad de México")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="right",legend.direction="vertical",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
+#Camas ventilador
+plot_camas_ventilador <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "ventilador"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
+  labs(x="",y="",title="Ocupación de camas con ventilador en hospitales IRAG de la Ciudad de México")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="right",legend.direction="vertical",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
+#Camas UCI
+plot_camas_uci <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "uci"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
+  labs(x="",y="",title="Ocupación de camas UCI en hospitales IRAG de la Ciudad de México")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="right",legend.direction="vertical",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
+
+```
+
+
+```{r cálculos misceláneos, include = F}
+#Camas vacías según la fecha de interés
+filter(camas_cdmx_adulto, fecha == "2021-01-18" & tipo_cama == "general") %>% 
+  ungroup() %>% 
+  summarise(sum(porcentaje_ocupacion ==0))
+
+filter(camas_cdmx_adulto, fecha == "2021-01-18" & tipo_cama == "ventilador") %>% 
+  ungroup() %>% 
+  summarise(sum(porcentaje_ocupacion ==0))
+
+filter(camas_cdmx_adulto, fecha == "2021-01-18" & tipo_cama == "uci") %>% 
+  ungroup() %>% 
+  summarise(sum(porcentaje_ocupacion ==0))
+
+```
+
+
+```{r ocupacion hospitalaria tablero cdmx, echo = F}
+ocu_hosp_tablero <- data.frame(fecha = seq.Date(from = ymd("2020-12-26"), to = ymd("2021-01-19"), by = 1),
+                               porcentaje_ocupacion = c(78, 80, 82, 84, 83, 85, 84, 85, 87, 87, 87, 83, 
+                                                        84, 86, 87, 88, 89, 88, 88, 86, 87, 88, 89, 88, 
+                                                        90))
+
+```
+
