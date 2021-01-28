@@ -108,73 +108,93 @@ camas_nacional <- rbind(camas_generales, camas_ventilador, camas_uci) %>%
 
 
 ```{r análisis camas ciudad de méxico, warning= F, echo = F}
-camas_cdmx_adulto <- camas_cdmx %>% 
+camas_cdmx_a <- camas_cdmx %>% 
   anti_join(filter(camas_cdmx,  str_detect(hospital, "Pedi")|
                      str_detect(hospital, "Infantil") |
                      str_detect(hospital, "ped")), by = "clues") %>% 
   mutate(porcentaje_mod = cut(porcentaje_ocupacion, breaks = seq(from = 0, to = 100, by = 10), include.lowest = T))
 
-#Camas generales
-plot_camas_grales <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "general"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
-  geom_tile(colour="white",size=0.2) + 
-  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
-  labs(x="",y="",title="Ocupación de camas generales en hospitales IRAG de la Ciudad de México")+
-  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
-  theme_grey(base_size=10)+
-  theme(legend.position="right",legend.direction="vertical",
-        legend.title=element_text(colour="grey40"),
-        legend.margin=margin(grid::unit(0,"cm")),
-        legend.text=element_text(colour="grey40",size=7,face="bold"),
-        legend.key.height=grid::unit(0.8,"cm"),
-        legend.key.width=grid::unit(0.2,"cm"),
-        axis.text.x=element_text(size=10,colour="grey40"),
-        axis.text.y=element_text(vjust=0.2,colour="grey40"),
-        axis.ticks=element_line(size=0.4),
-        plot.background=element_blank(),
-        panel.border=element_blank(),
-        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
-        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
-#Camas ventilador
-plot_camas_ventilador <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "ventilador"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
-  geom_tile(colour="white",size=0.2) + 
-  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
-  labs(x="",y="",title="Ocupación de camas con ventilador en hospitales IRAG de la Ciudad de México")+
-  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
-  theme_grey(base_size=10)+
-  theme(legend.position="right",legend.direction="vertical",
-        legend.title=element_text(colour="grey40"),
-        legend.margin=margin(grid::unit(0,"cm")),
-        legend.text=element_text(colour="grey40",size=7,face="bold"),
-        legend.key.height=grid::unit(0.8,"cm"),
-        legend.key.width=grid::unit(0.2,"cm"),
-        axis.text.x=element_text(size=10,colour="grey40"),
-        axis.text.y=element_text(vjust=0.2,colour="grey40"),
-        axis.ticks=element_line(size=0.4),
-        plot.background=element_blank(),
-        panel.border=element_blank(),
-        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
-        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
-#Camas UCI
-plot_camas_uci <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "uci"),aes(x=fecha, y=hospital, fill=porcentaje_ocupacion))+
-  geom_tile(colour="white",size=0.2) + 
-  guides(fill=guide_legend(title="Porcentaje de\nocupación"))+
-  labs(x="",y="",title="Ocupación de camas UCI en hospitales IRAG de la Ciudad de México")+
-  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
-  theme_grey(base_size=10)+
-  theme(legend.position="right",legend.direction="vertical",
-        legend.title=element_text(colour="grey40"),
-        legend.margin=margin(grid::unit(0,"cm")),
-        legend.text=element_text(colour="grey40",size=7,face="bold"),
-        legend.key.height=grid::unit(0.8,"cm"),
-        legend.key.width=grid::unit(0.2,"cm"),
-        axis.text.x=element_text(size=10,colour="grey40"),
-        axis.text.y=element_text(vjust=0.2,colour="grey40"),
-        axis.ticks=element_line(size=0.4),
-        plot.background=element_blank(),
-        panel.border=element_blank(),
-        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
-        plot.title=element_text(colour="grey40",hjust=0,size=14,face="bold"))
+nombres_hospitales <- tibble(hospitales_abrev=c("UT Móvil", "UMF 28 Valle", "UMF 13 Azcapotzalco", "UMF 120 Zaragoza", "Troncoso", "Primero de Oct", "Ort Magd Salinas", "Lic. AL Mateos", "INR", "INPer", "INNN", "INER", "INCMNSZ", "INCICh", "INCAN", "Hosp Tlahuac", "HN Homeopático", "H Militar el Vergel", "H Militar Constituyentes", "H Militar de la Mujer", "H Juárez de México", "H Gral Xoco", "H General Villa", "H Gral Tepepan", "H Gral Tláhuac", "H Gral Milpa Alta", "H Gral Iztapalapa", "H Gral Rubén Leñero", "H Gral Gea González", "H Gral Enrique Cabrera", "H Gral de México", "H Gral Balbuena", "H Gral Ajusco Medio", "Hospital de la mujer", "H Esp Belisario Dom", "Hospital Central Sur", "Hospital Central Norte", "Hospital Central Militar", "CMN la Raza infecto", "HGZMF8 San Ángel", "HGZMF29 S.J Aragón", "HGZ 48 SP Xalpa", "HGZ 47 Vicente Guerrero", "HGZ32 Villa Coapa", "HGZ30 Iztacalco", "HGZ27 Tlatelolco", "HGZ 24 Insurgentes", "HGZ1 Venados", "HGZ1 McGregor", "HGR2 Villa Coapa", "CMN la Raza gral", "CMN SXXI HEs", "CMN la Raza HEs", "CMN SXXI card", "Psiq MF10", "Gral Morelos y P", "Gral Ignacio Z", "Dr. Fernando Quiróz", "Dr. Darío Fernández", "CM Naval", "Centro Banamex", "A D.F", "81o Batallón Infan", "6o gpo Moteros", "22o Batallón Infan", "20 de nov", "Tacuba"),
+                             clues = c("DFIMS001065", "DFIMS000546", "DFIMS000032", "DFIMS000382", "DFIMS000312", "DFIST000090", "DFIMS000196", "DFIST000201", "DFSSA003956", "DFSSA004096", "DFSSA004060", "DFSSA004026", "DFSSA004055", "DFSSA004031", "DFSSA004043", "DFIST001053", "DFSSA003990", "DFSDN000016", "DFSDN000050", "DFSDN000062", "DFSSA003944", "DFSSA003162", "DFSSA000881", "DFSSA002672", "DFSSA018154", "DFSSA002066", "DFSSA001540", "DFSSA003553", "DFSSA003961", "DFSSA017886", "DFSSA003973", "DFSSA003722", "DFSSA018166", "DFSSA004002", "DFSSA004265", "DFPMX000024", "DFPMX000012", "DFSDN000086", "DFIMS000056", "DFIMS000464", "DFIMS000230", "DFIMS000831", "DFIMS000365","DFIMS000126", "DFIMS000324", "DFIMS000621", "DFIMS000225", "DFIMS000522", "DFIMS000534", "DFIMS000814", "DFIMS000061", "DFIMS000580", "DFIMS000020", "DFIMS000575", "DFIMS000790", "DFIST000155", "DFIST000160", "DFIST000196", "DFIST000324", "DFSMA000010", "DFSSA004970", "DFSDN000074", "DFSDN000115", "DFSDN000120", "DFSDN000103", "DFIST000312", "DFIST000534")
+                        )
 
+camas_cdmx_adulto <- camas_cdmx_a %>% 
+  left_join(nombres_hospitales, by = "clues")
+```
+
+
+```{r análisis camas ciudad de méxico, warning= F, echo = F}
+#Camas generales
+plot_camas_grales <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "general"),aes(x=fecha, y=hospitales_abrev, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="% ocupación"))+
+  labs(x="",y="",title="Ocupación de camas generales",
+  subtitle= "Hospitales IRAG de la CDMX")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="bottom",legend.direction="horizontal",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=11,face="bold"),
+        plot.subtitle = element_text(colour="grey40",vjust=2,size=8,face="bold"))
+#Camas ventilador
+plot_camas_ventilador <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "ventilador"),aes(x=fecha, y=hospitales_abrev, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="% ocupación"))+
+  labs(x="",y="",title="Ocupación de camas con ventilador",
+  subtitle = "Hospitales IRAG de la CDMX")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="bottom",legend.direction="horizontal",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=11,face="bold"),
+        plot.subtitle = element_text(colour="grey40",vjust=2,size=8,face="bold"))
+#Camas UCI
+plot_camas_uci <- ggplot(filter(camas_cdmx_adulto, tipo_cama == "uci"),aes(x=fecha, y=hospitales_abrev, fill=porcentaje_ocupacion))+
+  geom_tile(colour="white",size=0.2) + 
+  guides(fill=guide_legend(title="% ocupación"))+
+  labs(x="",y="",title="Ocupación de camas UCI",
+  subtitle = "Hospitales IRAG de la CDMX")+
+  scale_fill_distiller(palette = "YlOrRd", direction = 1)+
+  theme_grey(base_size=10)+
+  theme(legend.position="bottom",legend.direction="horizontal",
+        legend.title=element_text(colour="grey40"),
+        legend.margin=margin(grid::unit(0,"cm")),
+        legend.text=element_text(colour="grey40",size=7,face="bold"),
+        legend.key.height=grid::unit(0.8,"cm"),
+        legend.key.width=grid::unit(0.2,"cm"),
+        axis.text.x=element_text(size=10,colour="grey40"),
+        axis.text.y=element_text(vjust=0.2,colour="grey40"),
+        axis.ticks=element_line(size=0.4),
+        plot.background=element_blank(),
+        panel.border=element_blank(),
+        plot.margin=margin(0.7,0.4,0.1,0.2,"cm"),
+        plot.title=element_text(colour="grey40",hjust=0,size=11,face="bold"),
+        plot.subtitle = element_text(colour="grey40",vjust=2,size=8,face="bold"))
+
+
+ggsave(filename = "plot_camas_grales.jpeg", plot_camas_grales, width = 220, height = 220, units = "mm")
+ggsave(filename = "plot_camas_ventilador.jpeg", plot_camas_ventilador, width = 220, height = 220, units = "mm")
+ggsave(filename = "plot_camas_uci.jpeg", plot_camas_uci, width = 220, height = 220, units = "mm")
 ```
 
 
@@ -200,6 +220,7 @@ ocu_hosp_tablero <- data.frame(fecha = seq.Date(from = ymd("2020-12-26"), to = y
                                porcentaje_ocupacion = c(78, 80, 82, 84, 83, 85, 84, 85, 87, 87, 87, 83, 
                                                         84, 86, 87, 88, 89, 88, 88, 86, 87, 88, 89, 88, 
                                                         90))
+
 
 ```
 
